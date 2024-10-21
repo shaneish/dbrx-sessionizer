@@ -24,14 +24,43 @@ def quotate(s: str | None) -> str:
 
 def main():
     parser = ArgumentParser(description="Generate a Databricks script template")
-    parser.add_argument("--profile", "-p", type=str, default=None, help="Primary workspace client profile.")
+    parser.add_argument(
+        "--profile",
+        "-p",
+        type=str,
+        default=None,
+        help="Primary workspace client profile.",
+    )
     parser.add_argument("--cluster", "-c", type=str, default=None)
-    parser.add_argument("--file", "-F", type=str, default=None, help="Output file name.")
-    parser.add_argument("--file_name", "-f", type=str, default=None, help="Output file name in scratchpad folder.")
-    parser.add_argument("--scratchpad_dir", "-s", type=str, default=".", help="Scratchpad directory.")
-    parser.add_argument("--description", "-d", type=str, default=None, help="Description of the script.")
-    parser.add_argument("--notebook_cells", "-n", action="store_true", help="Use the Databricks notebook cell separator.")
-    parser.add_argument("--cell_separator", "-C", type=str, default="# %%", help="Cell separator for notebook cells.")
+    parser.add_argument(
+        "--file", "-F", type=str, default=None, help="Output file name."
+    )
+    parser.add_argument(
+        "--file_name",
+        "-f",
+        type=str,
+        default=None,
+        help="Output file name in scratchpad folder.",
+    )
+    parser.add_argument(
+        "--scratchpad_dir", "-s", type=str, default=".", help="Scratchpad directory."
+    )
+    parser.add_argument(
+        "--description", "-d", type=str, default=None, help="Description of the script."
+    )
+    parser.add_argument(
+        "--notebook_cells",
+        "-n",
+        action="store_true",
+        help="Use the Databricks notebook cell separator.",
+    )
+    parser.add_argument(
+        "--cell_separator",
+        "-C",
+        type=str,
+        default="# %%",
+        help="Cell separator for notebook cells.",
+    )
 
     args = parser.parse_args()
 
@@ -42,7 +71,7 @@ def main():
             f_name_comps.append(args.profile)
         if args.cluster:
             f_name_comps.append(args.cluster)
-        f_name_comps.append('{date:%Y%m%d-%H%M%S}'.format(date=datetime.datetime.now()))
+        f_name_comps.append("{date:%Y%m%d-%H%M%S}".format(date=datetime.datetime.now()))
         f_name = "-".join(f_name_comps) + ".py"
     if args.file_name:
         file_path = args.file_name
@@ -58,7 +87,13 @@ def main():
         if args.description:
             description = args.description.replace("\n", "\n# ")
             f.write(f"# {description}\n\n")
-        f.write(template.format(profile=quotate(args.profile), cluster=quotate(args.cluster), separator=cell_identifier))
+        f.write(
+            template.format(
+                profile=quotate(args.profile),
+                cluster=quotate(args.cluster),
+                separator=cell_identifier,
+            )
+        )
 
     print(file_path)
 
