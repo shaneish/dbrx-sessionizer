@@ -10,7 +10,7 @@ cluster = 0123-456789-ex12345
 from dbrx_sesh.session import get_session
 
 
-spark, wc, dbutils, args = get_session(
+spark, wc, dbutils = get_session(
     profile="dev",
     cluster=None,
 )

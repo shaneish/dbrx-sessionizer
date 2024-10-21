@@ -5,7 +5,7 @@ import datetime
 template = """from dbrx_sesh import get_session
 
 
-spark, wc, dbutils, args = get_session(
+spark, wc, dbutils = get_session(
     profile = {profile},
     cluster = {cluster},
 )
