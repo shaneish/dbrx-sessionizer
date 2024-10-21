@@ -40,7 +40,6 @@ def get_session(
     dbutils = wc.dbutils
     spark, cluster_id = None, None
     cluster = cluster or cfg.get(profile, {}).get("cluster")
-    print(profile, cluster)
     if cluster:
         matching_cluster = DummyCluster()
         try:
@@ -55,7 +54,6 @@ def get_session(
                     f"[info] Unable to identify cluster {cluster} by `cluster_id` or `cluster_name`"
                 )
         cluster_id = matching_cluster.cluster_id
-    print(cluster_id)
     if cluster_id:
         config = Config(profile=profile, cluster_id=cluster_id)
         spark = DatabricksSession.builder.sdkConfig(config).getOrCreate()
