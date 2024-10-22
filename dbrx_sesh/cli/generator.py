@@ -2,24 +2,18 @@ from argparse import ArgumentParser
 import datetime
 
 
-template = """from dbrx_sesh import get_session
+import_template = """from dbrx_sesh import get_session
+"""
 
 
+session_template = """
 spark, wc, dbutils = get_session(
-    profile = {profile},
-    cluster = {cluster},
+{params}
 )
 
 {separator}
 
 """
-
-
-def quotate(s: str | None) -> str:
-    if s:
-        return f'"{s}"'
-    else:
-        return "None"
 
 
 def main():
@@ -31,7 +25,27 @@ def main():
         default=None,
         help="Primary workspace client profile.",
     )
-    parser.add_argument("--cluster", "-c", type=str, default=None)
+    parser.add_argument(
+        "--cluster",
+        "-c",
+        type=str,
+        default=None,
+        help="Cluster name or cluster ID to use for your session.",
+    )
+    parser.add_argument(
+        "--host",
+        "-H",
+        type=str,
+        default=None,
+        help="Host of the workspace you're connecting to.  Note that this is ignored if a --profile argument is also given.",
+    )
+    parser.add_argument(
+        "--token_env",
+        "-t",
+        type=str,
+        default="DATABRICKS_API_TOKEN",
+        help="Environment variable name your token is stored in.  Note that this is ignored if a --profile argument is also given.",
+    )
     parser.add_argument(
         "--file", "-F", type=str, default=None, help="Output file name."
     )
@@ -82,15 +96,27 @@ def main():
         cell_identifier = "# COMMAND ----------"
     if args.file:
         file_path = args.file
+    session_args = []
+    if args.profile:
+        session_args.append(f"    profile = '{args.profile}',")
+    if args.cluster:
+        session_args.append(f"    cluster = '{args.cluster}',")
+    if args.host:
+        session_args.append(f"    host = '{args.host},'")
+    if args.host:
+        session_args.append(f"    token = os.environ['{args.profile}'],")
+    session_info = "\n".join(session_args)
 
     with open(file_path, "w") as f:
         if args.description:
             description = args.description.replace("\n", "\n# ")
             f.write(f"# {description}\n\n")
+        f.write(import_template)
+        if args.token_env:
+            f.write("import os\n")
         f.write(
-            template.format(
-                profile=quotate(args.profile),
-                cluster=quotate(args.cluster),
+            session_template.format(
+                params=session_info,
                 separator=cell_identifier,
             )
         )

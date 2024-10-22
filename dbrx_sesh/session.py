@@ -26,10 +26,10 @@ class WorkspaceCredentials:
             "token": cls.token,
         }
 
-    def from_dict(d: dict[str, str]) -> 'WorkspaceCredentials':
+    def from_dict(d: dict[str, str]) -> "WorkspaceCredentials":
         return WorkspaceCredentials(
             host=d["host"],
-            token=d["token"]
+            token=d["token"],
         )
 
 
@@ -44,8 +44,9 @@ def dbrx_cfg(cfg_path: str) -> dict[str, dict[str, str]]:
 
 def get_session(
     profile: str | None = None,
-    credentials: WorkspaceCredentials | None = None,
     cluster: str | None = None,
+    host: str | None = None,
+    token: str | None = None,
     cfg_file: str | None = None,
 ) -> tuple[SparkSession | None, WorkspaceClient, RemoteDbUtils]:
     cfg_path = (
@@ -55,8 +56,8 @@ def get_session(
     )
     cfg = dbrx_cfg(cfg_path)
     profile = profile or "DEFAULT"
-    if credentials:
-        wc = WorkspaceClient(host=credentials.host, token=credentials.token)
+    if host and token:
+        wc = WorkspaceClient(host=host, token=token)
     else:
         wc = WorkspaceClient(profile=profile, config_file=cfg_path)
     dbutils = wc.dbutils

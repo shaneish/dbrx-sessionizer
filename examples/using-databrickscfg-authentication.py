@@ -2,15 +2,15 @@
 # workspace host and personal access token.  In this case, we've hardcoded the host URL and are reading
 # our token in from the shell variables as "DATABRICKS_PERSONAL_ACCESS_TOKEN"
 
-from dbrx_sesh.session import get_session, WorkspaceCredentials
+from dbrx_sesh.session import get_session
 import os
 
 
-credentials = WorkspaceCredentials(
+spark, wc, dbutils = get_session(
+    cluster="0123-456789-ab9cdd69",
     host="https://example-workspace-dev.cloud.databricks.com",
     token=os.environ["DATABRICKS_PERSONAL_ACCESS_TOKEN"],
 )
-spark, wc, dbutils = get_session(credentials=credentials)
 
 # %%
 
