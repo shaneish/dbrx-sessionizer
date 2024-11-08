@@ -8,7 +8,7 @@
 [dev]
 host  = https://example-dev.cloud.databricks.com/
 token = dapiexampletoken
-cluster = 0123-456789-ex12345
+cluster_id = 0123-456789-ex12345
 """
 
 from dbrx_sesh.session import get_session
