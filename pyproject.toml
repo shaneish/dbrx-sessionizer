@@ -7,11 +7,11 @@ exclude = ["examples"]
 where = ["./"]
 
 [project]
-name = "dbrx_sesh"
+name = "dbrxish"
 version = "0.0.1"
 description = "Simple module to set up a Databricks notebook session in your local development environment.  Currently only works for 15.4 LTS runtimes."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 license = {file = "LICENSE"}
 keywords = ["databricks", "session", "local"]
 authors = [
@@ -35,9 +35,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["ruff", "wheel"]
-
-[project.scripts]
-gdxsh = "dbrx_sesh.cli.generator:main"
 
 [project.urls]
 "Homepage" = "https://github.com/shaneish/databricks_sessionizer"
