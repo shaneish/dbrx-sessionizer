@@ -8,10 +8,15 @@ from datetime import timedelta, datetime
 from pathlib import Path
 from dataclasses import dataclass
 from functools import reduce
-from typing import Any
+from typing import Any, Self
 import csv
 import json
 import time
+
+
+# helper function to underline string
+def underit(s: str) -> str:
+    return "\u0332".join(s) + "\u0332"
 
 
 # handles table output for the sql editor
@@ -45,7 +50,9 @@ class QueryResult:
                 )
             )
             if idx == limit:
+                out[0] = underit(out[0])
                 return "\n".join(out)
+        out[0] = underit(out[0])
         return "\n".join(out)
 
     def __repr__(self):
@@ -59,6 +66,16 @@ class QueryResult:
         return spark.createDataFrame(
             self.rows,
             schema=self.header
+        )
+
+    @classmethod
+    def from_df(cls, df: DataFrame) -> Self:
+        return cls(
+            header=df.columns,
+            rows=[
+                [r for r in row]
+                for row in df.collect()
+            ]
         )
 
 

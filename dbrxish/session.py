@@ -22,12 +22,17 @@ class SeshBuilder:
         self._dbutils: DBUtils | RemoteDbUtils | None = None
         self._spark_configs: dict = {}
         self._is_remote = environ.get("DATABRICKS_RUNTIME_VERSION") is not None
+        self._default_use_workspace_client_dbutils = False
 
     def spark_configs(self, *args: tuple[str, Any], **kwargs) -> Self:
         for k, v in args:
             self._spark_configs[k] = v
         for k, v in kwargs.items():
             self._spark_configs[k] = v
+        return self
+
+    def set_fast_dbutils(self) -> Self:
+        self._default_use_workspace_client_dbutils = True
         return self
 
     def spark_config(self, param: str, val: Any) -> Self:
@@ -87,7 +92,7 @@ class SeshBuilder:
 
     @property
     def dbutils(self) -> DBUtils | RemoteDbUtils:
-        if self.spark_client_enabled:
+        if self._default_use_workspace_client_dbutils or self.spark_client_enabled:
             self._dbutils = DBUtils(self.spark)
         else:
             self._dbutils = self.workspace_client.dbutils

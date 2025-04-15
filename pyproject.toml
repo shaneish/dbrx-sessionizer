@@ -8,7 +8,7 @@ where = ["./"]
 
 [project]
 name = "dbrxish"
-version = "0.0.1"
+version = "0.1.0"
 description = "Simple module to set up a Databricks notebook session in your local development environment.  Currently only works for 15.4 LTS runtimes."
 readme = "README.md"
 requires-python = ">=3.11"
