@@ -29,5 +29,9 @@ python3 -m pip install git+https://github.com/shaneish/dbrx-sessionizer.git
 usage examples can be found in the [examples](./examples) folder.
 
 # todo
-1) sql query repl
-2) remote execution repl
+1) refactor ExecutionKernel code
+  - abstract out cluster management into separate class
+  - structure execution output better
+  - clean it up.  it's a mess, easily the worst part of this code.  was basically hacked together just to get something working quickly with zero cleanup afterwards
+2) sql query repl
+3) remote execution repl

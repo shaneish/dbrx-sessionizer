@@ -57,7 +57,8 @@ class QueryResult:
 
     def to_df(self, spark: SparkSession) -> DataFrame:
         return spark.createDataFrame(
-            [{k: v for k, v in zip(self.header, row)} for row in self.rows]
+            self.rows,
+            schema=self.header
         )
 
 
@@ -301,7 +302,7 @@ class ExecutionKernel:
             return result
 
     @property
-    def cluster_ready(self) -> None | ClusterDetails:
+    def cluster_ready(self) -> bool:
         return self.cluster_state == "RUNNING"
 
     def _context(self, wait: bool = False) -> str | None:
