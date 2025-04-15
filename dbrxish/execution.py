@@ -1,14 +1,198 @@
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.compute import Language, ClusterDetails, Wait, Results
+from databricks.sdk.service.compute import Language, ClusterDetails, Results
+from databricks.sdk.service.sql import StatementResponse
+from databricks.sdk.service.catalog import ColumnInfo
+from databricks.sdk.service._internal import Wait
+from pyspark.sql import DataFrame, SparkSession
 from datetime import timedelta, datetime
+from pathlib import Path
+from dataclasses import dataclass
+from functools import reduce
+from typing import Any
+import csv
 import json
+import time
 
 
+# handles table output for the sql editor
+@dataclass
+class QueryResult:
+    header: list[str]
+    rows: list[list[str | int | float | bool | None]]
+    preview: int = 100
+
+    def csv(self, f: str | Path):
+        with open(f, "w") as fc:
+            writer = csv.writer(fc, delimiter=",")
+            writer.writerow(self.header)
+            writer.writerows(self.rows)
+
+    def __add__(self, qr: "QueryResult") -> Any:
+        if qr.header == self.header:
+            return QueryResult(self.header, self.rows + qr.rows)
+
+    def display(self, limit: int | None = None) -> str:
+        max_lens = []
+        out = []
+        for idx in range(len(self.header)):
+            max_lens.append(
+                max([len(str(r[idx])) + 2 for r in [self.header] + self.rows])
+            )
+        for idx, row in enumerate([self.header] + self.rows):
+            out.append(
+                " ".join(
+                    [str(r).ljust(max_lens[idx] or 0) for idx, r in enumerate(row)]
+                )
+            )
+            if idx == limit:
+                return "\n".join(out)
+        return "\n".join(out)
+
+    def __repr__(self):
+        overage = len(self.rows) - self.preview
+        output = self.display(limit=self.preview)
+        if overage > 0:
+            output = output + f"\n... ({overage} more rows)"
+        return output
+
+    def to_df(self, spark: SparkSession) -> DataFrame:
+        return spark.createDataFrame([{k: v for k, v in zip(self.header, row)} for row in self.rows])
+
+
+# allows sql editor-esque functionality in local code/repl
+class SQLEditor:
+    def __init__(
+        self,
+        wc: WorkspaceClient | None = None,
+        warehouse_id: str | None = None,
+    ):
+        self.wc = wc or WorkspaceClient()
+        self.warehouse_id = warehouse_id or self.wc.config.warehouse_id
+        self.history = []
+
+    def _convert(
+        self, results: list[list[str]], columns: list[ColumnInfo]
+    ) -> QueryResult:
+        cols = sorted([(p.position, "STRING" if not p.type_name else p.type_name.value) for p in columns])
+        header = [r[1] for r in sorted([(p.position, p.name) for p in columns])]
+        converted = []
+        for row in results:
+            record = []
+            for k, v in cols:
+                if k is not None:
+                    match v:
+                        case "BINARY" | "INT" | "SHORT" | "LONG":
+                            record.append(int(row[k]))
+                        case "DECIMAL" | "DOUBLE" | "FLOAT" | "ARRAY":
+                            record.append(float(row[k]))
+                        case "NULL":
+                            record.append(None)
+                        case "BOOLEAN":
+                            record.append(True if row[k].lower().startswith("t") else False)
+                        case _:
+                            record.append(row[k])
+                else:
+                    record.append(None)
+            converted.append(record)
+        return QueryResult(header, converted)
+
+    def query(self, query: str) -> QueryResult | None:
+        response = self.wc.statement_execution.execute_statement(
+            query, self.warehouse_id, wait_timeout="50s"
+        )
+        try:
+            table = self.collect(response)
+        except Exception as e:
+            self.history.append((query, response.statement_id, e))
+            raise e
+        else:
+            self.history.append((query, response.statement_id, table))
+        return table
+
+    def collect(self, response: StatementResponse) -> QueryResult | None:
+        table_chunks = []
+        if response is not None and response.statement_id:
+            if response.status and not response.status.error:
+                r = self.wc.statement_execution.get_statement(
+                    response.statement_id
+                )
+                while (
+                    r
+                    and r.status
+                    and r.status.state
+                    and r.status.state.value in ["PENDING", "RUNNING"]
+                ):
+                    time.sleep(5)
+                    r = self.wc.statement_execution.get_statement(
+                        response.statement_id
+                    )
+                if r.result:
+                    found_columns = None
+                    if r.manifest and r.manifest.schema:
+                        found_columns = r.manifest.schema.columns
+                    if r.result.data_array:
+                            if found_columns:
+                                table_chunks.append(
+                                    self._convert(
+                                        r.result.data_array, found_columns
+                                    )
+                                )
+                    if r.result.next_chunk_index:
+                        found_statement_id = r.statement_id
+                        if found_statement_id and found_columns:
+                            chunk = (
+                                self.wc.statement_execution.get_statement_result_chunk_n(
+                                    found_statement_id, r.result.next_chunk_index
+                                )
+                            )
+                            while chunk and chunk.next_chunk_index and chunk.data_array:
+                                table_chunks.append(
+                                    self._convert(
+                                        chunk.data_array, found_columns
+                                    )
+                                )
+                                chunk = self.wc.statement_execution.get_statement_result_chunk_n(
+                                    found_statement_id, chunk.next_chunk_index
+                                )
+                    if table_chunks:
+                        table = reduce(lambda a, b: a + b, table_chunks)
+                    else:
+                        table = QueryResult([], [])
+                    table = (
+                        QueryResult([], [])
+                        if not table_chunks
+                        else reduce(lambda a, b: a + b, table_chunks)
+                    )
+                    return table
+            else:
+                if response.status and response.status.error:
+                    if response.status.error.error_code and response.status.error.message:
+                        raise Exception(
+                            f"{response.status.error.error_code.value} - {response.status.error.message}"
+                        )
+                    else:
+                        raise Exception(
+                            f"Unknown error: {response.status.error}"
+                        )
+                else:
+                    raise Exception("Unknown error reading query results")
+
+    def __call__(self, query: str) -> QueryResult | None:
+        return self.query(query)
+
+    def __sub__(self, query: str):
+        return self.__call__(query)
+
+    @property
+    def table(self) -> QueryResult | None:
+        if self.history:
+            return self.history[-1][-1]
+
+
+# just an easy helper function to return the databricks sdk enum for a lang
 def get_language(language: str) -> Language:
     if language is not None:
         match language.lower():
-            case "python":
-                return Language.PYTHON
             case "scala":
                 return Language.SCALA
             case "sql":
@@ -17,13 +201,17 @@ def get_language(language: str) -> Language:
                 return Language.PYTHON
 
 
+# handles statement remote code execution from local repl
+#
+# TODO: this needs to get cleaned up.  the cluster startup/management code should be
+# in a separate class/module and this should just handle remote code execution
 class ExecutionKernel:
     def __init__(
         self,
         wc: WorkspaceClient,
         cluster_id: str | None = None,
         verbose: bool = False,
-        default_language: str = Language.PYTHON,
+        default_language: Language = Language.PYTHON,
         cluster_timeout_mins: int = 20,
         context_timeout_mins: int = 5,
         command_timeout_mins: int = 20,
@@ -214,7 +402,7 @@ class ExecutionKernel:
         elif self.context_state != "RUNNING":
             msg = f"Waiting on context: status - {self.context_state}"
         else:
-            msg = f"Session is ready"
+            msg = "Session is ready"
         return msg
 
     def _execute(

@@ -1,14 +1,33 @@
 # databricks sessionizer
 
-a simple library that can be imported to easily configure a databricks session via `databricks-connect` to do development work on your local machine.  i really just set this up to make it easier for me to crank out notebooks in neovim instead of needing to work within the databricks ui directly.
+a simple library that includes disparate databricks admin python modules for the eap databricks workspaces
 
-this library currently only support 15.4 lts runtimes on python3.12.  if you want older runtimes, feel free to make an issue and submit a pr.
+this library currently only support 15.4 lts runtimes on python3.11+.  if you want older runtimes, feel free to make an issue and submit a pr.
+
+## what it do
+a number of things that makes it easier to develop databricks code locally:
+1) generate sessions (spark, dbutils, and workspace clients) with optional configurations depending on where code is being run so that code will run in any environment -- local repl, databricks script, or databricks notebook.
+2) execute arbitrary code on remote databricks clusters (this is helpful if developing code that relies on a specific cluster config, such as instance profile)
+3) sql editor: write and run sql statements on remove sql warehouses from anywhere
+  - your query history is retained so you can reference previous queries and their output
+  - returns a QueryHistory object to make remote use easier:
+    * query output display formatted to make it easier to read and examine in a terminal
+    * easily save query output to csv
+    * convert query output to a dataframe for further investigation if needed (only use for exploration purposes, for production please create a proper dataframe using `spark.table()` or `spark.sql()` methods
 
 ## installation
-clone this repo onto your local machine, cd into the repo root, and run `python3 -m pip install .`
+clone this repo onto your local machine, cd into the repo root, and run:
+```python
+python3 -m pip install .
+```
 
+can also pip install from the git repo by doing:
+```python
+python3 -m pip install git+https://github.com/shaneish/dbrx-sessionizer.git
+```
 ## usage
 usage examples can be found in the [examples](./examples) folder.
 
-## templater
-if you want to generate a session template script easily, use the `gdxsh` cli command that gets installed with this package.  run `gdxsh -h` in your terminal for usage information about the session templater.
+# todo
+1) sql query repl
+2) remote execution repl
