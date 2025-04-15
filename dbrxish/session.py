@@ -9,7 +9,6 @@ from os import environ
 
 
 class SeshBuilder:
-
     def __init__(self, *args, **kwargs):
         self._default_config: tuple[tuple, dict[str, str]] | None = None
         if args or kwargs:
@@ -70,7 +69,9 @@ class SeshBuilder:
 
     @property
     def workspace_client(self) -> WorkspaceClient:
-        self._workspace_client = self._workspace_client or WorkspaceClient(config=self.config)
+        self._workspace_client = self._workspace_client or WorkspaceClient(
+            config=self.config
+        )
         return self._workspace_client
 
     @property
@@ -86,7 +87,9 @@ class SeshBuilder:
     def wc(self) -> WorkspaceClient:
         return self.workspace_client
 
-    def get_session(self) -> tuple[SparkSession, DBUtils | RemoteDbUtils, WorkspaceClient]:
+    def get_session(
+        self,
+    ) -> tuple[SparkSession, DBUtils | RemoteDbUtils, WorkspaceClient]:
         return self.spark, self.dbutils, self.workspace_client
 
     def sql_editor(self) -> SQLEditor:

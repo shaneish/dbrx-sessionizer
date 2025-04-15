@@ -1,6 +1,7 @@
 """
 example usage if plan to authenticate using a non-default profile locally
 """
+
 from dbrxish.session import SeshBuilder
 
 

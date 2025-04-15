@@ -56,7 +56,9 @@ class QueryResult:
         return output
 
     def to_df(self, spark: SparkSession) -> DataFrame:
-        return spark.createDataFrame([{k: v for k, v in zip(self.header, row)} for row in self.rows])
+        return spark.createDataFrame(
+            [{k: v for k, v in zip(self.header, row)} for row in self.rows]
+        )
 
 
 # allows sql editor-esque functionality in local code/repl
@@ -73,7 +75,12 @@ class SQLEditor:
     def _convert(
         self, results: list[list[str]], columns: list[ColumnInfo]
     ) -> QueryResult:
-        cols = sorted([(p.position, "STRING" if not p.type_name else p.type_name.value) for p in columns])
+        cols = sorted(
+            [
+                (p.position, "STRING" if not p.type_name else p.type_name.value)
+                for p in columns
+            ]
+        )
         header = [r[1] for r in sorted([(p.position, p.name) for p in columns])]
         converted = []
         for row in results:
@@ -88,7 +95,9 @@ class SQLEditor:
                         case "NULL":
                             record.append(None)
                         case "BOOLEAN":
-                            record.append(True if row[k].lower().startswith("t") else False)
+                            record.append(
+                                True if row[k].lower().startswith("t") else False
+                            )
                         case _:
                             record.append(row[k])
                 else:
@@ -113,9 +122,7 @@ class SQLEditor:
         table_chunks = []
         if response is not None and response.statement_id:
             if response.status and not response.status.error:
-                r = self.wc.statement_execution.get_statement(
-                    response.statement_id
-                )
+                r = self.wc.statement_execution.get_statement(response.statement_id)
                 while (
                     r
                     and r.status
@@ -123,33 +130,25 @@ class SQLEditor:
                     and r.status.state.value in ["PENDING", "RUNNING"]
                 ):
                     time.sleep(5)
-                    r = self.wc.statement_execution.get_statement(
-                        response.statement_id
-                    )
+                    r = self.wc.statement_execution.get_statement(response.statement_id)
                 if r.result:
                     found_columns = None
                     if r.manifest and r.manifest.schema:
                         found_columns = r.manifest.schema.columns
                     if r.result.data_array:
-                            if found_columns:
-                                table_chunks.append(
-                                    self._convert(
-                                        r.result.data_array, found_columns
-                                    )
-                                )
+                        if found_columns:
+                            table_chunks.append(
+                                self._convert(r.result.data_array, found_columns)
+                            )
                     if r.result.next_chunk_index:
                         found_statement_id = r.statement_id
                         if found_statement_id and found_columns:
-                            chunk = (
-                                self.wc.statement_execution.get_statement_result_chunk_n(
-                                    found_statement_id, r.result.next_chunk_index
-                                )
+                            chunk = self.wc.statement_execution.get_statement_result_chunk_n(
+                                found_statement_id, r.result.next_chunk_index
                             )
                             while chunk and chunk.next_chunk_index and chunk.data_array:
                                 table_chunks.append(
-                                    self._convert(
-                                        chunk.data_array, found_columns
-                                    )
+                                    self._convert(chunk.data_array, found_columns)
                                 )
                                 chunk = self.wc.statement_execution.get_statement_result_chunk_n(
                                     found_statement_id, chunk.next_chunk_index
@@ -166,14 +165,15 @@ class SQLEditor:
                     return table
             else:
                 if response.status and response.status.error:
-                    if response.status.error.error_code and response.status.error.message:
+                    if (
+                        response.status.error.error_code
+                        and response.status.error.message
+                    ):
                         raise Exception(
                             f"{response.status.error.error_code.value} - {response.status.error.message}"
                         )
                     else:
-                        raise Exception(
-                            f"Unknown error: {response.status.error}"
-                        )
+                        raise Exception(f"Unknown error: {response.status.error}")
                 else:
                     raise Exception("Unknown error reading query results")
 

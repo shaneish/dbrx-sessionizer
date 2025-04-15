@@ -1,6 +1,7 @@
 """
 example usage for local repl sql editor
 """
+
 from dbrxish.session import SeshBuilder
 
 
@@ -12,7 +13,9 @@ query_output = sql("""
     where user = 'stephenson.shane.a@gmail.com'
 """)
 
-if query_output is not None: # this is just done to fix lsp complaints, the above query is guaranteed to return something
+if (
+    query_output is not None
+):  # this is just done to fix lsp complaints, the above query is guaranteed to return something
     # show structured preview of query result
     print(query_output)
 

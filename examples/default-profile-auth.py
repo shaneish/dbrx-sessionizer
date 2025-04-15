@@ -1,6 +1,7 @@
 """
 example usage if plan to authenticate using the default profile credentials both locally and in databricks
 """
+
 from dbrxish.session import SeshBuilder
 
 
@@ -13,4 +14,6 @@ shanes_stuff = next(
 print("shane's databricks user info:", shanes_stuff)
 
 # use spark to run queries
-spark.sql("SELECT 'just an example query running on a Databricks cluster' AS example_column").show()
+spark.sql(
+    "SELECT 'just an example query running on a Databricks cluster' AS example_column"
+).show()
