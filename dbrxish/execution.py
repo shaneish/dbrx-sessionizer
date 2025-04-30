@@ -9,6 +9,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from functools import reduce
 from typing import Any, Self
+import sys
 import csv
 import json
 import time
@@ -19,24 +20,57 @@ def underit(s: str) -> str:
     return "\u0332".join(s) + "\u0332"
 
 
+class OutWriter:
+    def __init__(self, name: str | None | Path = None):
+        self.name = name
+
+    def __enter__(self):
+        if self.name:
+            self.file = open(self.name, 'w')
+        else:
+            self.file = sys.stdout
+        return self.file
+
+    def __exit__(self, *_):
+        if self.file and self.name:
+            self.file.close()
+
+
 # handles table output for the sql editor
 @dataclass
 class QueryResult:
     header: list[str]
     rows: list[list[str | int | float | bool | None]]
-    preview: int = 100
+    preview: int | None = 100
 
-    def csv(self, f: str | Path):
-        with open(f, "w") as fc:
+    def write_csv(self, f: str | Path | None = None, header: bool = True):
+        rows = self.rows if (not self.preview) else self.rows[:self.preview]
+        with OutWriter(f) as fc:
             writer = csv.writer(fc, delimiter=",")
-            writer.writerow(self.header)
-            writer.writerows(self.rows)
+            if header:
+                writer.writerow(self.header)
+            writer.writerows(rows)
+
+    def to_dict(self) -> list[dict[str, str | int | float | bool | None]]:
+        if self.preview:
+            return [dict(zip(self.header, row)) for idx, row in enumerate(self.rows) if idx <= self.preview]
+        return [dict(zip(self.header, row)) for row in self.rows]
+
+    def write_json(self, f: str | Path | None = None, indent: int = 4):
+        with OutWriter(f) as fc:
+            json.dump(self.to_dict(), fc, indent=indent)
+            fc.write("\n")
+
+    def write_display(self, f: str | Path | None = None):
+        with OutWriter(f) as fc:
+            fc.write(self.display(self.preview))
+            fc.write("\n")
 
     def __add__(self, qr: "QueryResult") -> Any:
         if qr.header == self.header:
             return QueryResult(self.header, self.rows + qr.rows)
 
-    def display(self, limit: int | None = None) -> str:
+    def display(self, preview: int | None = None) -> str:
         max_lens = []
         out = []
         for idx in range(len(self.header)):
@@ -49,17 +83,18 @@ class QueryResult:
                     [str(r).ljust(max_lens[idx] or 0) for idx, r in enumerate(row)]
                 )
             )
-            if idx == limit:
+            if idx == preview:
                 out[0] = underit(out[0])
                 return "\n".join(out)
         out[0] = underit(out[0])
         return "\n".join(out)
 
     def __repr__(self):
-        overage = len(self.rows) - self.preview
-        output = self.display(limit=self.preview)
-        if overage > 0:
-            output = output + f"\n... ({overage} more rows)"
+        output = self.display(preview=self.preview)
+        if self.preview:
+            overage = len(self.rows) - self.preview
+            if overage > 0:
+                output = output + f"\n... ({overage} more rows)"
         return output
 
     def to_df(self, spark: SparkSession) -> DataFrame:
@@ -77,6 +112,10 @@ class QueryResult:
                 for row in df.collect()
             ]
         )
+
+    def set_preview(self, preview: int | None = None) -> Self:
+        self.preview = preview
+        return self
 
 
 # allows sql editor-esque functionality in local code/repl

@@ -38,3 +38,6 @@ dev = ["ruff", "wheel"]
 
 [project.urls]
 "Homepage" = "https://github.com/shaneish/databricks_sessionizer"
+
+[project.scripts]
+dxsh = "dbrxish.cli.main:main"

@@ -28,6 +28,25 @@ python3 -m pip install git+https://github.com/shaneish/dbrx-sessionizer.git
 ## usage
 usage examples can be found in the [examples](./examples) folder.
 
+## cli
+there's also an associated cli command for running sql queries.  when you `pip install` the project, the cli command can be used via `dxsh` (DatabriX seSH -- ya, i know, it sucks).
+
+examples:
+```bash
+# query table and output csv to terminal
+dxsh --sql "select * from some_catalog.some_schema.some_table" -o csv
+
+# query table and output a formatted table to terminal
+dxsh --sql "select * from some_catalog.some_schema.some_table"
+
+# query table using a different auth profile and output json to terminal
+dxsh --sql "select * from some_catalog.some_schema.some_table" -o json -P TEST-PROFILE
+
+# query table with a different warehouse and output formatted table to terminal
+dxsh --sql "select * from some_catalog.some_schema.some_table" --warehouse_id 999fff3fd3d78f9d # can also use -W instead
+```
+
+
 # todo
 1) refactor ExecutionKernel code
   - abstract out cluster management into separate class
