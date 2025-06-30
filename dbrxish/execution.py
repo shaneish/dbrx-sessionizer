@@ -144,19 +144,27 @@ class SQLEditor:
             record = []
             for k, v in cols:
                 if k is not None:
-                    match v:
-                        case "BINARY" | "INT" | "SHORT" | "LONG":
-                            record.append(int(row[k]))
-                        case "DECIMAL" | "DOUBLE" | "FLOAT" | "ARRAY":
-                            record.append(float(row[k]))
-                        case "NULL":
-                            record.append(None)
-                        case "BOOLEAN":
-                            record.append(
-                                True if row[k].lower().startswith("t") else False
-                            )
-                        case _:
-                            record.append(row[k])
+                    if row[k]:
+                        match v:
+                            case "BINARY" | "INT" | "SHORT" | "LONG":
+                                record.append(int(row[k]))
+                            case "DECIMAL" | "DOUBLE" | "FLOAT":
+                                record.append(float(row[k]))
+                            case "MAP" | "ARRAY" | "STRUCT" | "JSON":
+                                try:
+                                    record.append(json.loads(row[k]))
+                                except json.JSONDecodeError:
+                                    record.append(row[k])
+                            case "NULL":
+                                record.append(None)
+                            case "BOOLEAN":
+                                record.append(
+                                    True if row[k].lower().startswith("t") else False
+                                )
+                            case _:
+                                record.append(row[k])
+                    else:
+                        record.append(None)
                 else:
                     record.append(None)
             converted.append(record)
@@ -262,6 +270,7 @@ def get_language(language: str) -> Language:
 #
 # TODO: this needs to get cleaned up.  the cluster startup/management code should be
 # in a separate class/module and this should just handle remote code execution
+# this was just a simple prototype i threw together for a niche problem.
 class ExecutionKernel:
     def __init__(
         self,

@@ -8,6 +8,28 @@ from typing import Self, Any
 from os import environ
 
 
+class EnvVars:
+    def __init__(self, dbutils: DBUtils | RemoteDbUtils | None = None):
+        self._dbutils = dbutils
+        self._env_vars: dict[str, str] = environ.copy()
+        self._widget_vars: dict[str, str] = {}
+        if self._dbutils:
+            self._widget_vars =  self._dbutils.widgets.getAll()
+
+        def __getattr__(self, item: str) -> str:
+            if item in self._env_vars:
+                return self._env_vars[item]
+            elif item in self._widget_vars:
+                return self._widget_vars[item]
+            raise AttributeError(f"Environment variable '{item}' not found.")
+
+        def refresh(self) -> Self:
+            self._env_vars = environ.copy()
+            if self._dbutils:
+                self._widget_vars = self._dbutils.widgets.getAll()
+            return self
+
+
 class SeshBuilder:
     def __init__(self, *args, **kwargs):
         self._default_config: tuple[tuple, dict[str, str]] | None = None
@@ -23,6 +45,7 @@ class SeshBuilder:
         self._spark_configs: dict = {}
         self._is_remote = environ.get("DATABRICKS_RUNTIME_VERSION") is not None
         self._default_use_workspace_client_dbutils = False
+        self.params: EnvVars = EnvVars()
 
     def spark_configs(self, *args: tuple[str, Any], **kwargs) -> Self:
         for k, v in args:
@@ -96,6 +119,7 @@ class SeshBuilder:
             self._dbutils = DBUtils(self.spark)
         else:
             self._dbutils = self.workspace_client.dbutils
+        self.params = EnvVars(self._dbutils)
         return self._dbutils
 
     # just an alias for what I like to use
