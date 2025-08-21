@@ -1,6 +1,6 @@
 # databricks sessionizer
 
-a simple library that includes disparate databricks admin python modules for the eap databricks workspaces
+a simple library that includes various databricks workspace admin and user processes.  primarily used for interacting with databricks workspaces and writing admin code for databricks workspaces that run the same locally as in a databricks notebook or script.  additionally, it includes a cli command for running sql queries against databricks sql warehouses and metastore.
 
 this library currently only support 15.4 lts runtimes on python3.11+.  if you want older runtimes, feel free to make an issue and submit a pr.
 
